@@ -1,0 +1,209 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'screens/splash_screen.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/auth/signup_screen.dart';
+import 'screens/home/home_screen.dart';
+import 'screens/seller/become_seller_screen.dart';
+import 'screens/admin/admin_dashboard.dart';
+import 'utils/app_colors.dart';
+import 'utils/app_routes.dart';
+import 'services/auth_service.dart';
+
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Set preferred orientations
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  // Set system UI overlay style
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.white,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
+
+  runApp(const GroceryApp());
+}
+
+class GroceryApp extends StatelessWidget {
+  const GroceryApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'FreshCart - Grocery Delivery',
+      debugShowCheckedModeBanner: false,
+      theme: _buildTheme(),
+      initialRoute: AppRoutes.splash,
+      onGenerateRoute: _generateRoute,
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+          child: child!,
+        );
+      },
+    );
+  }
+
+  ThemeData _buildTheme() {
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.primary,
+        brightness: Brightness.light,
+      ),
+      textTheme: GoogleFonts.interTextTheme(),
+      scaffoldBackgroundColor: AppColors.scaffoldBackground,
+      appBarTheme: AppBarTheme(
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        titleTextStyle: GoogleFonts.inter(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textPrimary,
+        ),
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          textStyle: GoogleFonts.inter(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.inputBackground,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.border, width: 1),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.primary, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.error, width: 1),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.error, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        hintStyle: GoogleFonts.inter(
+          color: AppColors.textSecondary,
+          fontSize: 14,
+        ),
+        labelStyle: GoogleFonts.inter(
+          color: AppColors.textSecondary,
+          fontSize: 14,
+        ),
+      ),
+      cardTheme: CardTheme(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: AppColors.border, width: 1),
+        ),
+        color: Colors.white,
+        surfaceTintColor: Colors.transparent,
+      ),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: Colors.white,
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.textSecondary,
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
+        selectedLabelStyle: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+        unselectedLabelStyle: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+        ),
+      ),
+    );
+  }
+
+  Route<dynamic>? _generateRoute(RouteSettings settings) {
+    switch (settings.name) {
+      case AppRoutes.splash:
+        return _createRoute(const SplashScreen());
+
+      case AppRoutes.login:
+        return _createRoute(const LoginScreen());
+
+      case AppRoutes.signup:
+        return _createRoute(const SignupScreen());
+
+      case AppRoutes.home:
+        return _createRoute(const HomeScreen());
+
+      case AppRoutes.becomeSeller:
+        return _createRoute(const BecameSellerScreen());
+
+      case AppRoutes.adminDashbaord:
+        return _createRoute(const AdminDashboard());
+
+
+
+      default:
+        return _createRoute(
+          Scaffold(
+            body: Center(
+              child: Text(
+                'Route not found: ${settings.name}',
+                style: GoogleFonts.inter(fontSize: 16),
+              ),
+            ),
+          ),
+        );
+    }
+  }
+
+  PageRouteBuilder _createRoute(Widget page) {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const begin = Offset(1.0, 0.0);
+        const end = Offset.zero;
+        const curve = Curves.easeInOutCubic;
+
+        var tween = Tween(begin: begin, end: end).chain(
+          CurveTween(curve: curve),
+        );
+
+        return SlideTransition(
+          position: animation.drive(tween),
+          child: child,
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 300),
+    );
+  }
+}
