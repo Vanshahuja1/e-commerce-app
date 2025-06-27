@@ -4,12 +4,20 @@ import 'package:google_fonts/google_fonts.dart';
 import 'screens/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
+import 'screens/auth/password.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/seller/become_seller_screen.dart';
 import 'screens/admin/admin_dashboard.dart';
 import 'utils/app_colors.dart';
 import 'utils/app_routes.dart';
 import 'services/auth_service.dart';
+import 'screens/seller/seller_dashboard.dart';
+import 'screens/cart/cart_screen.dart';
+import 'screens/search/search_screen.dart';
+import 'screens/profile/profile.dart';
+import 'screens/payment.dart';
+import 'screens/search/showcase_screen.dart';
+
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -170,6 +178,26 @@ class GroceryApp extends StatelessWidget {
       case AppRoutes.adminDashbaord:
         return _createRoute(const AdminDashboard());
 
+      case AppRoutes.sellerDashboard:
+        return _createRoute(const SellerDashboard());
+
+      case AppRoutes.cart:
+        return _createRoute(const CartScreen());
+
+      case AppRoutes.search:
+        return _createRoute(const SearchScreen(), settings: settings);
+
+      case AppRoutes.profile:
+        return _createRoute(const ProfilePage());  
+
+      case AppRoutes.resetPassword:
+        return _createRoute(const ResetPasswordScreen());  
+
+      case AppRoutes.payment:
+        return _createRoute(const PaymentScreen(), settings: settings);  
+
+      case AppRoutes.showcase:
+        return _createRoute(const ShowcaseScreen() , settings: settings);  
 
 
       default:
@@ -186,24 +214,25 @@ class GroceryApp extends StatelessWidget {
     }
   }
 
-  PageRouteBuilder _createRoute(Widget page) {
-    return PageRouteBuilder(
-      pageBuilder: (context, animation, secondaryAnimation) => page,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        const begin = Offset(1.0, 0.0);
-        const end = Offset.zero;
-        const curve = Curves.easeInOutCubic;
+  PageRouteBuilder _createRoute(Widget page, {RouteSettings? settings}) {
+  return PageRouteBuilder(
+    settings: settings, // <--- THIS IS THE FIX
+    pageBuilder: (context, animation, secondaryAnimation) => page,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      const begin = Offset(1.0, 0.0);
+      const end = Offset.zero;
+      const curve = Curves.easeInOutCubic;
 
-        var tween = Tween(begin: begin, end: end).chain(
-          CurveTween(curve: curve),
-        );
+      var tween = Tween(begin: begin, end: end).chain(
+        CurveTween(curve: curve),
+      );
 
-        return SlideTransition(
-          position: animation.drive(tween),
-          child: child,
-        );
-      },
-      transitionDuration: const Duration(milliseconds: 300),
-    );
-  }
+      return SlideTransition(
+        position: animation.drive(tween),
+        child: child,
+      );
+    },
+    transitionDuration: const Duration(milliseconds: 300),
+  );
+}
 }

@@ -5,6 +5,7 @@ import '../../utils/app_routes.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
+import 'otp_verification_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -36,6 +37,86 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
+  // Enhanced password validation method
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter a password';
+    }
+
+    // Check minimum length
+    if (value.length < 8) {
+      return 'Password must be at least 8 characters long';
+    }
+
+    // Check for uppercase letter
+    if (!RegExp(r'[A-Z]').hasMatch(value)) {
+      return 'Password must contain at least one uppercase letter';
+    }
+
+    // Check for lowercase letter
+    if (!RegExp(r'[a-z]').hasMatch(value)) {
+      return 'Password must contain at least one lowercase letter';
+    }
+
+    // Check for number
+    if (!RegExp(r'[0-9]').hasMatch(value)) {
+      return 'Password must contain at least one number';
+    }
+
+    // Check for special character
+    if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(value)) {
+      return 'Password must contain at least one special character';
+    }
+
+    return null; // Password is valid
+  }
+
+  // Method to get password strength
+  String _getPasswordStrength(String password) {
+    int score = 0;
+    
+    if (password.length >= 8) score++;
+    if (RegExp(r'[A-Z]').hasMatch(password)) score++;
+    if (RegExp(r'[a-z]').hasMatch(password)) score++;
+    if (RegExp(r'[0-9]').hasMatch(password)) score++;
+    if (RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password)) score++;
+
+    switch (score) {
+      case 0:
+      case 1:
+        return 'Very Weak';
+      case 2:
+        return 'Weak';
+      case 3:
+        return 'Fair';
+      case 4:
+        return 'Good';
+      case 5:
+        return 'Strong';
+      default:
+        return 'Very Weak';
+    }
+  }
+
+  // Method to get password strength color
+  Color _getPasswordStrengthColor(String password) {
+    String strength = _getPasswordStrength(password);
+    switch (strength) {
+      case 'Very Weak':
+        return Colors.red;
+      case 'Weak':
+        return Colors.orange;
+      case 'Fair':
+        return Colors.yellow;
+      case 'Good':
+        return Colors.lightGreen;
+      case 'Strong':
+        return Colors.green;
+      default:
+        return Colors.red;
+    }
+  }
+
   Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -58,7 +139,17 @@ class _SignupScreenState extends State<SignupScreen> {
 
       if (result.success) {
         _showSnackBar(result.message, isError: false);
-        Navigator.pushReplacementNamed(context, AppRoutes.home);
+        
+        // Navigate to OTP verification screen instead of home
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OTPVerificationScreen(
+              email: _emailController.text.trim(),
+              name: _nameController.text.trim(),
+            ),
+          ),
+        );
       } else {
         _showSnackBar(result.message, isError: true);
       }
@@ -229,31 +320,75 @@ class _SignupScreenState extends State<SignupScreen> {
 
         const SizedBox(height: 20),
 
-        // Password Field
-        CustomTextField(
-          controller: _passwordController,
-          label: 'Password',
-          hint: 'Create a strong password',
-          obscureText: _obscurePassword,
-          prefixIcon: Icons.lock_outline,
-          suffixIcon: IconButton(
-            icon: Icon(
-              _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-              color: AppColors.textSecondary,
+        // Password Field with enhanced validation
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CustomTextField(
+              controller: _passwordController,
+              label: 'Password',
+              hint: 'Create a strong password',
+              obscureText: _obscurePassword,
+              prefixIcon: Icons.lock_outline,
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  color: AppColors.textSecondary,
+                ),
+                onPressed: () {
+                  setState(() => _obscurePassword = !_obscurePassword);
+                },
+              ),
+              validator: _validatePassword,
+              onChanged: (value) {
+                setState(() {}); // Trigger rebuild to update password strength indicator
+              },
             ),
-            onPressed: () {
-              setState(() => _obscurePassword = !_obscurePassword);
-            },
-          ),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please enter a password';
-            }
-            if (value.length < 6) {
-              return 'Password must be at least 6 characters';
-            }
-            return null;
-          },
+            
+            // Password strength indicator
+            if (_passwordController.text.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text(
+                    'Password Strength: ',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  Text(
+                    _getPasswordStrength(_passwordController.text),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _getPasswordStrengthColor(_passwordController.text),
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 4),
+              
+              // Password requirements
+              Text(
+                'Password must contain:',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              
+              const SizedBox(height: 4),
+              
+              _buildPasswordRequirement('At least 8 characters', _passwordController.text.length >= 8),
+              _buildPasswordRequirement('One uppercase letter', RegExp(r'[A-Z]').hasMatch(_passwordController.text)),
+              _buildPasswordRequirement('One lowercase letter', RegExp(r'[a-z]').hasMatch(_passwordController.text)),
+              _buildPasswordRequirement('One number', RegExp(r'[0-9]').hasMatch(_passwordController.text)),
+              _buildPasswordRequirement('One special character', RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(_passwordController.text)),
+            ],
+          ],
         ),
 
         const SizedBox(height: 20),
@@ -285,6 +420,30 @@ class _SignupScreenState extends State<SignupScreen> {
           },
         ),
       ],
+    );
+  }
+
+  // Helper widget to build password requirement indicators
+  Widget _buildPasswordRequirement(String requirement, bool isMet) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(
+        children: [
+          Icon(
+            isMet ? Icons.check_circle : Icons.radio_button_unchecked,
+            size: 12,
+            color: isMet ? Colors.green : AppColors.textSecondary,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            requirement,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              color: isMet ? Colors.green : AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

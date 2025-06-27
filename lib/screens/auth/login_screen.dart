@@ -5,7 +5,7 @@ import '../../utils/app_routes.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
-import '../../models/user_model.dart'; // Import your user model
+import '../../models/user_model.dart'; 
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -239,18 +239,23 @@ class _LoginScreenState extends State<LoginScreen> {
 
         const SizedBox(height: 16),
 
-        // Forgot Password
+        // Forgot Password Button
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
             onPressed: () {
-              // TODO: Implement forgot password
+              Navigator.pushNamed(context, '/reset_password');
             },
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
             child: Text(
               'Forgot Password?',
               style: GoogleFonts.inter(
                 color: AppColors.primary,
-                fontWeight: FontWeight.w500,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),

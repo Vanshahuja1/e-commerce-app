@@ -9,6 +9,7 @@ class AuthService {
   // Change to your server URL
   static const String _tokenKey = 'auth_token';
   static const String _userKey = 'user_data';
+  static const String _userIdKey = 'user_id'; // Add this key
   static const String _isLoggedInKey = 'is_logged_in';
 
   /// Check if user is logged in
@@ -76,37 +77,7 @@ class AuthService {
 
   /// Login user with temporary bypass option
   static Future<AuthResult> login(String emailOrPhone, String password) async {
-    // Temporary bypass credentials
-    // Temporary bypass credentials
-//     const tempEmail = 'temp@example.com';
-//     const tempPassword = 'temp1234';
-//
-// // Check for temporary credentials first
-//     if (emailOrPhone == tempEmail && password == tempPassword) {
-//       // Create a dummy UserModel for temp access
-//       final tempUser = UserModel(
-//         id: 'temp_id',
-//         name: 'Temporary User',
-//         email: tempEmail,
-//         phone: '0000000000',
-//         userType: UserType.buyer,      // Assuming temp user is a buyer, you can change this
-//         profileImage: null,
-//         createdAt: DateTime.now(),
-//       );
-//
-//       // Save dummy user data locally, and set logged in
-//       await _saveUserData(tempUser);
-//       // Save a dummy token as well
-//       await _saveToken('temp_token');
-//
-//       return AuthResult(
-//         success: true,
-//         message: 'Temporary login successful',
-//         user: tempUser,
-//       );
-//     }
-
-    // Original login logic below
+    // Original login logic
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/auth/login'),
@@ -145,7 +116,7 @@ class AuthService {
     }
   }
 
-  /// Register new user
+  /// Register new user (MODIFIED for OTP verification)
   static Future<AuthResult> signup(String name, String email, String phone, String password) async {
     try {
       final response = await http.post(
@@ -162,21 +133,87 @@ class AuthService {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 201 && data['success']) {
-        final userModel = UserModel.fromJson(data['user']);
-
-        // Save user data and token
-        await _saveUserData(userModel);
-        await _saveToken(data['token']);
-
+        // DON'T save user data and token yet - wait for OTP verification
         return AuthResult(
           success: true,
-          message: data['message'],
-          user: userModel,
+          message: data['message'] ?? 'Account created! Please verify your email with the OTP sent.',
         );
       } else {
         return AuthResult(
           success: false,
           message: data['message'] ?? 'Signup failed',
+        );
+      }
+    } catch (e) {
+      return AuthResult(
+        success: false,
+        message: 'Network error: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Verify OTP after signup (NEW METHOD)
+  static Future<AuthResult> verifyOTP(String email, String otp) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/auth/verify-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'otp': otp,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success']) {
+        final userModel = UserModel.fromJson(data['user']);
+
+        // NOW save user data and token after successful verification
+        await _saveUserData(userModel);
+        await _saveToken(data['token']);
+
+        return AuthResult(
+          success: true,
+          message: data['message'] ?? 'Email verified successfully!',
+          user: userModel,
+        );
+      } else {
+        return AuthResult(
+          success: false,
+          message: data['message'] ?? 'Invalid OTP. Please try again.',
+        );
+      }
+    } catch (e) {
+      return AuthResult(
+        success: false,
+        message: 'Network error: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Resend OTP (NEW METHOD)
+  static Future<AuthResult> resendOTP(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/auth/resend-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success']) {
+        return AuthResult(
+          success: true,
+          message: data['message'] ?? 'OTP sent successfully!',
+        );
+      } else {
+        return AuthResult(
+          success: false,
+          message: data['message'] ?? 'Failed to resend OTP. Please try again.',
         );
       }
     } catch (e) {
@@ -240,10 +277,11 @@ class AuthService {
     }
   }
 
-  /// Save user data to local storage
+  /// Save user data to local storage - MODIFIED to also save user ID separately
   static Future<void> _saveUserData(UserModel user) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_userKey, jsonEncode(user.toJson()));
+    await prefs.setString(_userIdKey, user.id); // Save user ID separately
     await prefs.setBool(_isLoggedInKey, true);
   }
 
@@ -253,13 +291,14 @@ class AuthService {
     await prefs.setString(_tokenKey, token);
   }
 
-  /// Logout user
+  /// Logout user - MODIFIED to also clear user ID
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
 
     // Clear all auth data
     await prefs.remove(_tokenKey);
     await prefs.remove(_userKey);
+    await prefs.remove(_userIdKey); // Clear user ID as well
     await prefs.setBool(_isLoggedInKey, false);
   }
 
@@ -267,6 +306,12 @@ class AuthService {
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_tokenKey);
+  }
+
+  /// Get user ID - NEW METHOD
+  static Future<String?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_userIdKey);
   }
 
   /// Update user type (deprecated - use becomeSeller instead)

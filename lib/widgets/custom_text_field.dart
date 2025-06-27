@@ -21,6 +21,8 @@ class CustomTextField extends StatefulWidget {
   final TextCapitalization textCapitalization;
   final List<TextInputFormatter>? inputFormatters;
   final FocusNode? focusNode;
+  final TextAlign textAlign; // Added textAlign parameter
+  final TextStyle? style; // Added style parameter
 
   const CustomTextField({
     super.key,
@@ -41,6 +43,8 @@ class CustomTextField extends StatefulWidget {
     this.textCapitalization = TextCapitalization.none,
     this.inputFormatters,
     this.focusNode,
+    this.textAlign = TextAlign.start, // Default value
+    this.style,
   });
 
   @override
@@ -104,7 +108,8 @@ class _CustomTextFieldState extends State<CustomTextField> {
           readOnly: widget.readOnly,
           textCapitalization: widget.textCapitalization,
           inputFormatters: widget.inputFormatters,
-          style: GoogleFonts.inter(
+          textAlign: widget.textAlign, // Use the textAlign parameter
+          style: widget.style ?? GoogleFonts.inter(
             fontSize: 16,
             color: widget.enabled ? AppColors.textPrimary : AppColors.textSecondary,
             fontWeight: FontWeight.w400,

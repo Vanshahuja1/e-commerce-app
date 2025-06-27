@@ -3,8 +3,9 @@ class AppRoutes {
   static const String splash = '/';
   static const String login = '/login';
   static const String signup = '/signup';
-  static const String forgotPassword = '/forgot-password';
+  static const String resetPassword = '/reset_password';
   static const String verifyOtp = '/verify-otp';
+  static const String payment = '/payment';
 
   // Main App Routes
   static const String home = '/home';
@@ -42,7 +43,7 @@ class AppRoutes {
   static const String aboutUs = '/about-us';
   static const String privacyPolicy = '/privacy-policy';
   static const String termsConditions = '/terms-conditions';
-
+  static const String showcase = '/showcase';
   // Admin Routes
   static const String adminDashbaord = '/admin';
 }

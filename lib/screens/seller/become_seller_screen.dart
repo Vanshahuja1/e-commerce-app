@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../utils/app_colors.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
-import '../../services/seller_service.dart'; // Import the SellerService
+import '../../services/seller_service.dart'; 
 
 class BecameSellerScreen extends StatefulWidget {
   const BecameSellerScreen({super.key});

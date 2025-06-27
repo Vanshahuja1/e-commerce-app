@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
-
 import '/models/user_model.dart';
 import '/services/auth_service.dart';
+import '/services/cart_service.dart';
+import '/widgets/header.dart';
+import '/widgets/hero.dart';
+import '/widgets/category.dart';
+import '/widgets/products.dart';
+import '/widgets/footer.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({Key? key}) : super(key: key);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -13,212 +18,175 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   UserModel? _currentUser;
   int _cartItemCount = 0;
+  final GlobalKey<ProductsSectionState> _productsKey = GlobalKey<ProductsSectionState>();
 
   @override
-
+  void initState() {
+    super.initState();
+    _loadUser();
+    _loadCartCount();
+  }
 
   Future<void> _loadUser() async {
     _currentUser = await AuthService.getCurrentUser();
-    if (mounted) {
-      setState(() {});
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _loadCartCount() async {
+    _cartItemCount = await CartService.getCartItemCount();
+    if (mounted) setState(() {});
+  }
+
+  // Refresh method that will be called when user pulls to refresh
+  Future<void> _onRefresh() async {
+    try {
+      // Show loading indicator
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                const Text('Refreshing...'),
+              ],
+            ),
+            backgroundColor: Colors.green.shade600,
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+
+      // Refresh all data concurrently
+      await Future.wait([
+        _loadUser(),
+        _loadCartCount(),
+        _refreshProducts(),
+      ]);
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 20),
+                const SizedBox(width: 16),
+                const Text('Refreshed successfully!'),
+              ],
+            ),
+            backgroundColor: Colors.green.shade600,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.white, size: 20),
+                const SizedBox(width: 16),
+                Text('Refresh failed: ${e.toString()}'),
+              ],
+            ),
+            backgroundColor: Colors.red.shade600,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
+  // Method to refresh products
+  Future<void> _refreshProducts() async {
+    if (_productsKey.currentState != null) {
+      await _productsKey.currentState!.refreshProducts();
+    }
+  }
+
+  // Add this method to refresh cart count when returning from other screens
+  void _refreshCartCount() {
+    _loadCartCount();
+  }
+
+  void _handleSellerNavigation() {
+    if (_currentUser?.userType == UserType.seller) {
+      Navigator.pushNamed(context, '/seller-dashboard');
+    } else {
+      Navigator.pushNamed(context, '/become-seller');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Header (AppBar)
-      appBar: AppBar(
-        title: const Text('FreshMart'),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          // Cart Icon
-          Stack(
+      backgroundColor: Colors.grey.shade50,
+      appBar: Header(
+        cartItemCount: _cartItemCount,
+        currentUser: _currentUser,
+        onCartTap: () async {
+          await Navigator.pushNamed(context, '/cart');
+          // Refresh cart count when returning from cart
+          _refreshCartCount();
+        },
+        onProfileTap: () async {
+          await Navigator.pushNamed(context, '/profile');
+          // Refresh user data when returning from profile
+          _loadUser();
+        },
+        onSellerTap: _handleSellerNavigation,
+        onLogout: () async {
+          await AuthService.logout();
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/login');
+          }
+        },
+      ),
+      body: RefreshIndicator(
+        onRefresh: _onRefresh,
+        color: Colors.green.shade700,
+        backgroundColor: Colors.white,
+        strokeWidth: 3,
+        displacement: 40,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(), // This ensures pull-to-refresh works even when content doesn't fill the screen
+          child: Column(
             children: [
-              IconButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/cart');
-                },
-                icon: const Icon(Icons.shopping_cart),
+              const HeroSection(),
+              const SizedBox(height: 24),
+              const CategorySection(),
+              const SizedBox(height: 24),
+              ProductsSection(
+                key: _productsKey,
+                refreshCartCount: _refreshCartCount,
               ),
-              if (_cartItemCount > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    child: Text(
-                      '$_cartItemCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          // Profile/Menu
-          PopupMenuButton(
-            icon: const Icon(Icons.person),
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                child: const Text('Profile'),
-                onTap: () {
-                  Navigator.pushNamed(context, '/profile');
-                },
-              ),
-              if (_currentUser?.userType == UserType.seller)
-                PopupMenuItem(
-                  child: const Text('Seller Dashboard'),
-                  onTap: () {
-                    Navigator.pushNamed(context, '/seller-dashboard');
-                  },
-                ),
-              if (_currentUser?.userType == UserType.buyer)
-                PopupMenuItem(
-                  child: const Text('Become a Seller'),
-                  onTap: () {
-                    Navigator.pushNamed(context, '/become-seller');
-                  },
-                ),
-              PopupMenuItem(
-                child: const Text('Logout'),
-                onTap: () async {
-                  await AuthService.logout();
-                  if (mounted) {
-                    Navigator.pushReplacementNamed(context, '/login');
-                  }
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
-
-      // Body (Empty/Minimal content)
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.green.shade50,
-              Colors.white,
+              const SizedBox(height: 24),
+              // Add some extra space at the bottom to ensure smooth scrolling
+              const SizedBox(height: 50),
             ],
           ),
         ),
-        child: const Center(
-          child: Text(
-            'Welcome to FreshMart',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.green,
-            ),
-          ),
-        ),
       ),
-
-      // Footer (Bottom Navigation Bar)
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
-              spreadRadius: 1,
-              blurRadius: 5,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildFooterItem(
-                  icon: Icons.home,
-                  label: 'Home',
-                  isActive: true,
-                  onTap: () {},
-                ),
-                _buildFooterItem(
-                  icon: Icons.search,
-                  label: 'Search',
-                  onTap: () {
-                    // Navigate to search
-                  },
-                ),
-                _buildFooterItem(
-                  icon: Icons.shopping_cart,
-                  label: 'Cart',
-                  onTap: () {
-                    Navigator.pushNamed(context, '/cart');
-                  },
-                ),
-                _buildFooterItem(
-                  icon: Icons.person,
-                  label: 'Seller',
-                  onTap: () {
-                    Navigator.pushNamed(context, '/become-seller');
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFooterItem({
-    required IconData icon,
-    required String label,
-    bool isActive = false,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        decoration: BoxDecoration(
-          color: isActive ? Colors.green.withOpacity(0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isActive ? Colors.green : Colors.grey.shade600,
-              size: 24,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: isActive ? Colors.green : Colors.grey.shade600,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
+      bottomNavigationBar: Footer(
+        currentUser: _currentUser,
+        currentIndex: 0,
+        onHomeTap: () {},
+        onSearchTap: () => Navigator.pushNamed(context, '/search'),
+        onCartTap: () async {
+          await Navigator.pushNamed(context, '/cart');
+          _refreshCartCount();
+        },
+        onSellerTap: _handleSellerNavigation,
       ),
     );
   }
